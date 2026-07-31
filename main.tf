@@ -1,76 +1,13 @@
-terraform {
-  required_version = ">= 1.5"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-# -----------------------------
-# Security Group for RDS
-# -----------------------------
-resource "aws_security_group" "rds_sg" {
-  name        = "rds-sg"
-  description = "Allow MySQL Access"
-  vpc_id      = "vpc-084e2337fc593fa47" # Replace with your VPC ID
-
-  ingress {
-    description = "MySQL"
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Change to your EC2 security group or CIDR
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "rds-security-group"
-  }
-}
-
-# -----------------------------
-# DB Subnet Group
-# -----------------------------
-resource "aws_db_subnet_group" "rds_subnet" {
-  name = "rds-subnet-group"
-
-  subnet_ids = [
-    "subnet-00ef282a74e1955d8",
-    "subnet-05da271feec127ce4"
-  ] # Replace with two private subnet IDs
-
-  tags = {
-    Name = "rds-subnet-group"
-  }
-}
-
-# -----------------------------
-# RDS Instance
-# -----------------------------
 resource "aws_db_instance" "mysql" {
   identifier = "terraform-mysql"
 
   engine         = "mysql"
   engine_version = "8.0"
 
-  instance_class = "db.t3.micro"
+  instance_class = "db.t3.micro" # Free Tier eligible (or db.t2.micro for older accounts)
 
-  allocated_storage     = 20
-  max_allocated_storage = 100
-  storage_type          = "gp3"
+  allocated_storage = 20
+  storage_type      = "gp2"
 
   db_name  = "mydatabase"
   username = "admin"
@@ -84,28 +21,15 @@ resource "aws_db_instance" "mysql" {
   publicly_accessible = false
   multi_az            = false
 
-  storage_encrypted      = true
-  backup_retention_period = 7
+  storage_encrypted = false
+
+  backup_retention_period = 0
 
   skip_final_snapshot = true
   deletion_protection = false
+  apply_immediately   = true
 
   tags = {
     Name = "Terraform-RDS"
   }
-}
-
-# -----------------------------
-# Outputs
-# -----------------------------
-output "rds_endpoint" {
-  value = aws_db_instance.mysql.endpoint
-}
-
-output "rds_address" {
-  value = aws_db_instance.mysql.address
-}
-
-output "rds_port" {
-  value = aws_db_instance.mysql.port
 }
